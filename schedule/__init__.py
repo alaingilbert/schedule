@@ -319,7 +319,7 @@ class Job(object):
 
         if self.latest is not None:
             assert self.latest >= self.interval
-            interval = random.randint(self.interval, self.latest)
+            interval = random.uniform(self.interval, self.latest)
         else:
             interval = self.interval
 
