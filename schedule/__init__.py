@@ -88,6 +88,12 @@ class Scheduler(object):
         except ValueError:
             pass
 
+    def once(self, interval=1):
+        """Schedule a new periodic job."""
+        job = JobOnce(interval)
+        self.jobs.append(job)
+        return job
+
     def every(self, interval=1):
         """Schedule a new periodic job."""
         job = Job(interval)
@@ -366,6 +372,13 @@ class Job(object):
             if (self.next_run - datetime.datetime.now()).days >= 7:
                 self.next_run -= self.period
 
+
+class JobOnce(Job):
+    def run(self):
+        super(JobOnce, self).run()
+        return CancelJob
+
+
 # The following methods are shortcuts for not having to
 # create a Scheduler instance:
 
@@ -376,6 +389,11 @@ jobs = default_scheduler.jobs  # todo: should this be a copy, e.g. jobs()?
 def every(interval=1):
     """Schedule a new periodic job."""
     return default_scheduler.every(interval)
+
+
+def once(interval=1):
+    """Schedule a new periodic job."""
+    return default_scheduler.once(interval)
 
 
 def run_pending():
