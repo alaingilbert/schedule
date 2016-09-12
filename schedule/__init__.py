@@ -40,6 +40,7 @@ import functools
 import logging
 import random
 import time
+import gevent
 
 logger = logging.getLogger('schedule')
 
@@ -100,10 +101,13 @@ class Scheduler(object):
         self.jobs.append(job)
         return job
 
-    def _run_job(self, job):
+    def _run_job_thread(self, job):
         ret = job.run()
         if isinstance(ret, CancelJob) or ret is CancelJob:
             self.cancel_job(job)
+
+    def _run_job(self, job):
+        gevent.spawn(self._run_job_thread, job)
 
     @property
     def next_run(self):
@@ -121,6 +125,7 @@ class Scheduler(object):
 class Job(object):
     """A periodic job as used by `Scheduler`."""
     def __init__(self, interval):
+        self.being_run = False
         self.interval = interval  # pause interval * unit between runs
         self.latest = None  # upper limit to the interval
         self.job_func = None  # the job job_func to run
@@ -303,10 +308,13 @@ class Job(object):
     @property
     def should_run(self):
         """True if the job should be run now."""
+        if self.being_run:
+            return False
         return datetime.datetime.now() >= self.next_run
 
     def run(self):
         """Run the job and immediately reschedule it."""
+        self.being_run = True
         logger.info('Running job %s', self)
         ret = None
         try:
@@ -314,6 +322,7 @@ class Job(object):
         except:
             logger.exception('Job %s Died Unexpectedly', self)
         self.last_run = datetime.datetime.now()
+        self.being_run = False
         self._schedule_next_run()
         return ret
 
